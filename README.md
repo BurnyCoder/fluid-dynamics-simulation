@@ -2,6 +2,16 @@
 
 A real-time fluid dynamics simulation using Three.js based on Jos Stam's "Stable Fluids" paper. This interactive web application visualizes fluid behavior using WebGL.
 
+## Online Repository
+
+This project is available on GitHub at: https://github.com/BurnyCoder/fluid-dynamics-simulation
+
+To clone this repository:
+```bash
+git clone https://github.com/BurnyCoder/fluid-dynamics-simulation.git
+cd fluid-dynamics-simulation
+```
+
 ## Features
 
 - Real-time 2D fluid simulation
