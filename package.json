@@ -1,0 +1,22 @@
+{
+  "name": "fluid-dynamics-simulation",
+  "version": "1.0.0",
+  "description": "A real-time fluid dynamics simulation using Three.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "fluid-dynamics",
+    "three.js",
+    "webgl",
+    "simulation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+} 

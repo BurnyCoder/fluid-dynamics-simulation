@@ -1,0 +1,21 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log
+package-lock.json
+
+# Environment variables
+.env
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log 
