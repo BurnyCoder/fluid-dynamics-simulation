@@ -18,6 +18,9 @@ cd fluid-dynamics-simulation
 - Interactive fluid disturbance with mouse drag
 - Beautiful visualization using Three.js and WebGL shaders
 - Physically-based simulation using the Navier-Stokes equations
+- Interactive control panel for tuning simulation parameters
+- Preset fluid types (water, smoke, fire, oil)
+- Touch support for mobile devices
 
 ## How to Run (Single Command)
 
@@ -75,6 +78,40 @@ python run.py
 
 This will automatically open your browser to http://localhost:8000
 
+## Interactive Parameters
+
+The simulation includes a control panel with tunable parameters, allowing you to experiment with different fluid behaviors:
+
+### Physics Parameters
+
+- **Time Step**: Controls the size of each simulation step (affects simulation speed)
+- **Diffusion**: Controls how quickly properties spread through the fluid
+- **Viscosity**: Controls the "thickness" of the fluid
+- **Solver Iterations**: Higher values increase accuracy but decrease performance
+- **Density Persistence**: How long density (dye) remains visible
+- **Velocity Persistence**: How long velocity remains active
+
+### Interaction Parameters
+
+- **Force Strength**: Controls how strongly your mouse movements affect the fluid
+- **Force Radius**: Controls the area of influence of your mouse movements
+
+### Visualization Parameters
+
+- **Show Velocity Field**: Toggle to visualize the velocity field
+- **Color 1 & Color 2**: Customize the fluid's color gradient
+- **Velocity Color**: Customize the color of the velocity visualization
+- **Background Opacity**: Adjust the background transparency
+- **Fluid Opacity**: Adjust the fluid's transparency
+
+### Presets
+
+Choose from predefined fluid types:
+- **Water**: Default fluid with low viscosity and bluish colors
+- **Smoke**: Higher diffusion with grayscale colors
+- **Fire**: Lower viscosity with orange/yellow colors
+- **Oil**: Higher viscosity with brown/amber colors
+
 ## How It Works
 
 The simulation is based on the following core components:
@@ -87,8 +124,9 @@ The implementation follows Jos Stam's approach to stable fluid simulations, whic
 
 ## Controls
 
-- **Mouse drag**: Add force and dye to the fluid
+- **Mouse drag/touch**: Add force and dye to the fluid
 - **R key**: Reset the simulation
+- **Control panel**: Adjust simulation parameters in real-time
 
 ## Technical Details
 
@@ -96,6 +134,7 @@ The implementation follows Jos Stam's approach to stable fluid simulations, whic
 - Visualization: WebGL shaders via Three.js
 - Implemented using ES6 JavaScript modules
 - Cross-platform: Run on Windows, Mac, or Linux with a single command
+- Interactive UI built with dat.GUI for parameter tuning
 
 ## References
 

@@ -5,11 +5,28 @@ export class FluidSimulation {
         this.size = size;
         this.scene = scene;
         
-        // Simulation parameters
-        this.dt = 0.1;              // Time step
-        this.diffusion = 0.0001;    // Diffusion rate
-        this.viscosity = 0.000001;  // Viscosity
-        this.iterations = 4;        // Solver iterations
+        // Simulation parameters - moved to a params object for easier GUI integration
+        this.params = {
+            // Time and physics
+            dt: 0.1,                // Time step
+            diffusion: 0.0001,      // Diffusion rate
+            viscosity: 0.000001,    // Viscosity
+            iterations: 4,          // Solver iterations
+            densityDissipation: 0.99, // How quickly density fades
+            velocityDissipation: 0.99, // How quickly velocity fades
+            
+            // Force parameters
+            forceMultiplier: 10,   // Multiplier for mouse force
+            forceRadius: size / 20, // Radius of force effect
+            
+            // Visualization
+            showVelocity: false,    // Toggle velocity visualization
+            velocityColor: 0xFF0000, // Color for velocity visualization
+            densityColor1: 0x2155CD, // Deep blue
+            densityColor2: 0x0AA1DD, // Light blue
+            backgroundOpacity: 0.0,  // Background opacity
+            fluidOpacity: 1.0       // Fluid opacity multiplier
+        };
         
         // Initialize grid arrays
         this.reset();
@@ -58,12 +75,27 @@ export class FluidSimulation {
         );
         this.texture.needsUpdate = true;
         
+        // Create a data texture for velocity field
+        this.velocityTexture = new THREE.DataTexture(
+            new Float32Array(N * N * 3),  // RGB for x,y components and magnitude
+            N,
+            N,
+            THREE.RGBFormat,
+            THREE.FloatType
+        );
+        this.velocityTexture.needsUpdate = true;
+        
         // Custom shader material to visualize the fluid
         const material = new THREE.ShaderMaterial({
             uniforms: {
                 u_fluid: { value: this.texture },
-                u_color1: { value: new THREE.Color(0x2155CD) },  // Deep blue
-                u_color2: { value: new THREE.Color(0x0AA1DD) }   // Light blue
+                u_velocity: { value: this.velocityTexture },
+                u_color1: { value: new THREE.Color(this.params.densityColor1) },
+                u_color2: { value: new THREE.Color(this.params.densityColor2) },
+                u_velocity_color: { value: new THREE.Color(this.params.velocityColor) },
+                u_show_velocity: { value: this.params.showVelocity },
+                u_background_opacity: { value: this.params.backgroundOpacity },
+                u_fluid_opacity: { value: this.params.fluidOpacity }
             },
             vertexShader: `
                 varying vec2 vUv;
@@ -74,14 +106,41 @@ export class FluidSimulation {
             `,
             fragmentShader: `
                 uniform sampler2D u_fluid;
+                uniform sampler2D u_velocity;
                 uniform vec3 u_color1;
                 uniform vec3 u_color2;
+                uniform vec3 u_velocity_color;
+                uniform bool u_show_velocity;
+                uniform float u_background_opacity;
+                uniform float u_fluid_opacity;
                 varying vec2 vUv;
                 
                 void main() {
                     float density = texture2D(u_fluid, vUv).r;
-                    vec3 color = mix(u_color1, u_color2, density / 100.0);
-                    gl_FragColor = vec4(color, density / 50.0);
+                    vec3 color;
+                    float alpha;
+                    
+                    if (u_show_velocity) {
+                        vec3 vel = texture2D(u_velocity, vUv).rgb;
+                        float velMagnitude = vel.b;
+                        
+                        // Mix velocity visualization with density
+                        color = mix(
+                            mix(u_color1, u_color2, density / 100.0),
+                            u_velocity_color,
+                            velMagnitude * 5.0
+                        );
+                        
+                        alpha = max(velMagnitude * 2.0, density / 50.0) * u_fluid_opacity;
+                    } else {
+                        color = mix(u_color1, u_color2, density / 100.0);
+                        alpha = (density / 50.0) * u_fluid_opacity;
+                    }
+                    
+                    // Add background opacity
+                    alpha = max(alpha, u_background_opacity);
+                    
+                    gl_FragColor = vec4(color, alpha);
                 }
             `,
             transparent: true
@@ -95,6 +154,20 @@ export class FluidSimulation {
         const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
         this.plane = new THREE.Mesh(geometry, material);
         this.scene.add(this.plane);
+    }
+    
+    updateVisualizationUniforms() {
+        const material = this.plane.material;
+        
+        // Update color uniforms
+        material.uniforms.u_color1.value.set(this.params.densityColor1);
+        material.uniforms.u_color2.value.set(this.params.densityColor2);
+        material.uniforms.u_velocity_color.value.set(this.params.velocityColor);
+        
+        // Update visibility uniforms
+        material.uniforms.u_show_velocity.value = this.params.showVelocity;
+        material.uniforms.u_background_opacity.value = this.params.backgroundOpacity;
+        material.uniforms.u_fluid_opacity.value = this.params.fluidOpacity;
     }
     
     resize(width, height) {
@@ -112,8 +185,12 @@ export class FluidSimulation {
         const gridX = Math.floor(((x + window.innerWidth / 2) / window.innerWidth) * N);
         const gridY = Math.floor(((y + window.innerHeight / 2) / window.innerHeight) * N);
         
+        // Apply the force multiplier
+        amountX *= this.params.forceMultiplier;
+        amountY *= this.params.forceMultiplier;
+        
         // Add velocity at the point
-        const radius = N / 20;
+        const radius = this.params.forceRadius;
         
         for (let i = -radius; i <= radius; i++) {
             for (let j = -radius; j <= radius; j++) {
@@ -142,12 +219,40 @@ export class FluidSimulation {
         
         // Update the texture with new density values
         this.texture.needsUpdate = true;
+        
+        // Update velocity visualization texture if enabled
+        if (this.params.showVelocity) {
+            this.updateVelocityTexture();
+        }
+    }
+    
+    updateVelocityTexture() {
+        const N = this.size;
+        const data = this.velocityTexture.image.data;
+        
+        for (let j = 0; j < N; j++) {
+            for (let i = 0; i < N; i++) {
+                const idx = this.IX(i, j);
+                const dataIdx = (i + j * N) * 3;
+                
+                const u = this.u[idx];
+                const v = this.v[idx];
+                const magnitude = Math.sqrt(u * u + v * v);
+                
+                // Store u, v, and magnitude in RGB
+                data[dataIdx] = u;
+                data[dataIdx + 1] = v;
+                data[dataIdx + 2] = magnitude;
+            }
+        }
+        
+        this.velocityTexture.needsUpdate = true;
     }
     
     velocityStep() {
         const N = this.size;
-        const visc = this.viscosity;
-        const dt = this.dt;
+        const visc = this.params.viscosity;
+        const dt = this.params.dt;
         
         // Diffuse velocity
         this.diffuse(1, this.u_prev, this.u, visc, dt);
@@ -162,12 +267,19 @@ export class FluidSimulation {
         
         // Project again
         this.project(this.u, this.v, this.u_prev, this.v_prev);
+        
+        // Apply velocity dissipation
+        const dissipation = this.params.velocityDissipation;
+        for (let i = 0; i < N * N; i++) {
+            this.u[i] *= dissipation;
+            this.v[i] *= dissipation;
+        }
     }
     
     densityStep() {
         const N = this.size;
-        const diff = this.diffusion;
-        const dt = this.dt;
+        const diff = this.params.diffusion;
+        const dt = this.params.dt;
         
         // Diffuse density
         this.diffuse(0, this.density_prev, this.density, diff, dt);
@@ -175,16 +287,17 @@ export class FluidSimulation {
         // Advect density
         this.advect(0, this.density, this.density_prev, this.u, this.v, dt);
         
-        // Slowly dissipate density
+        // Apply density dissipation
+        const dissipation = this.params.densityDissipation;
         for (let i = 0; i < N * N; i++) {
-            this.density[i] *= 0.99;
+            this.density[i] *= dissipation;
         }
     }
     
     // Core fluid simulation functions based on Jos Stam's paper
     diffuse(b, x, x0, diffusion, dt) {
         const N = this.size;
-        const iterations = this.iterations;
+        const iterations = this.params.iterations;
         const a = dt * diffusion * (N - 2) * (N - 2);
         
         for (let k = 0; k < iterations; k++) {
@@ -202,7 +315,7 @@ export class FluidSimulation {
     
     project(velocX, velocY, p, div) {
         const N = this.size;
-        const iterations = this.iterations;
+        const iterations = this.params.iterations;
         
         // Calculate divergence
         for (let j = 1; j < N - 1; j++) {
