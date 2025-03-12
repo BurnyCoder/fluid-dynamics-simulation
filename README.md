@@ -1,6 +1,8 @@
 # Fluid Dynamics Simulation
 
-A real-time fluid dynamics simulation using Three.js based on Jos Stam's "Stable Fluids" paper. This interactive web application visualizes fluid behavior using WebGL.
+A real-time fluid dynamics simulation using Three.js. This interactive web application visualizes fluid behavior using WebGL.
+
+![image](https://github.com/user-attachments/assets/3c1d1940-83d1-4962-8c4a-2cc280acd4bd)
 
 ## Online Repository
 
