@@ -1,3 +1,3 @@
-![image](https://github.com/user-attachments/assets/1af5e69c-2ed0-4bc4-bf5a-ecc7cdee8145)
+<img width="953" alt="image" src="https://github.com/user-attachments/assets/bae093f2-43bf-488a-b92b-49c7f8923569" />
 
-Open fluid.html
+Open index.html
